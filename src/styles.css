@@ -1,0 +1,19 @@
+.card{
+  padding:20px;
+  background:#f1f5f9;
+  border-radius:8px;
+  width:200px;
+}
+
+.chart{
+  height:200px;
+  background:#e2e8f0;
+  margin-top:10px;
+}
+
+.alert{
+  background:#fee2e2;
+  padding:10px;
+  margin:10px 0;
+  border-radius:6px;
+}
