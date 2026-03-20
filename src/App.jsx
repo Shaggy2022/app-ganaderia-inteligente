@@ -6,6 +6,7 @@ import Feeding from "./pages/Feeding";
 import Costs from "./pages/Costs";
 import Inventory from "./pages/Inventory";
 import Alerts from "./pages/Alerts";
+import ReporteFinanciero from "./pages/ReporteFinanciero";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="/costs" element={<Costs />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/alerts" element={<Alerts />} />
+          <Route path="/reporte-financiero" element={<ReporteFinanciero />} />
         </Routes>
       </MainLayout>
     </BrowserRouter>
