@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Beef, Wheat, DollarSign, Bell } from "lucide-react";
+import { Home, Beef, Wheat, DollarSign, Bell, TrendingUp } from "lucide-react";
 
 const menu = [
   { name: "Dashboard", icon: Home, path: "/" },
@@ -8,6 +8,7 @@ const menu = [
   { name: "Alimentación", icon: Wheat, path: "/feeding" },
   { name: "Costos", icon: DollarSign, path: "/costs" },
   { name: "Alertas", icon: Bell, path: "/alerts" },
+  { name: "Rentabilidad", icon: TrendingUp, path: "/reporte-financiero" },
 ];
 
 export default function Sidebar() {
