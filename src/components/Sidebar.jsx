@@ -7,7 +7,6 @@ const menu = [
   { name: "Animales", icon: Beef, path: "/animals" },
   { name: "Alimentación", icon: Wheat, path: "/feeding" },
   { name: "Costos", icon: DollarSign, path: "/costs" },
-  { name: "Alertas", icon: Bell, path: "/alerts" },
   { name: "Rentabilidad", icon: TrendingUp, path: "/reporte-financiero" },
 ];
 
