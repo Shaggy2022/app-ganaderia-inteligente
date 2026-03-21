@@ -9,7 +9,8 @@ function AnimalForm({ animalToEdit = null, onClose }) {
     raza: "",
     fechaNacimiento: "",
     pesoInicial: "",
-    fechaVacunacion: ""
+    fechaVacunacion: "",
+    precioVenta: "", 
   });
 
   const [errors, setErrors] = useState({});
@@ -65,13 +66,14 @@ function AnimalForm({ animalToEdit = null, onClose }) {
         raza: form.raza,
         fechaNacimiento: form.fechaNacimiento,
         pesoInicial: form.pesoInicial ? Number(form.pesoInicial) : null,
-        fechaVacunacion: form.fechaVacunacion || null
+        fechaVacunacion: form.fechaVacunacion || null,
+        precioVenta: form.precioVenta 
       });
 
       showAlert(animalToEdit ? "¡Animal actualizado con éxito!" : "¡Animal registrado con éxito!", "success");
 
       if (animalToEdit) onClose();
-      else setForm({ id: "", raza: "", fechaNacimiento: "", pesoInicial: "", fechaVacunacion: "" });
+      else setForm({ id: "", raza: "", fechaNacimiento: "", pesoInicial: "", fechaVacunacion: "", precioVenta: "" });
 
     } catch (error) {
       showAlert(error.message, "error");
@@ -162,6 +164,18 @@ function AnimalForm({ animalToEdit = null, onClose }) {
             value={form.fechaVacunacion || ""}
             onChange={handleChange}
             className="p-2 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+        </div>
+
+        {/* Precio venta */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-slate-400 font-bold">Precio venta:</label>
+          <input
+            name="precioVenta"
+            placeholder="Precio venta $"
+            value={form.precioVenta}
+            onChange={handleChange}
+            className="p-2 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
 
