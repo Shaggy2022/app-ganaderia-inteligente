@@ -3,45 +3,87 @@ import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Catálogo para autocompletar precios
+const VACCINE_CATALOG = {
+  "fiebre aftosa": 1675,
+  "brucelosis rb51": 5860,
+  "clostridial": 2500,
+  "leptospirosis": 5000,
+  "carbón bacteridiano": 2000,
+};
+
 function AnimalForm({ animalToEdit = null, onClose }) {
   const [form, setForm] = useState({
     id: "",
     raza: "",
     fechaNacimiento: "",
     pesoInicial: "",
-    fechaVacunacion: "",
-    precioVenta: "", 
+    precioVenta: "",
+    vaccines: [], // Aquí guardaremos el esquema
   });
 
   const [errors, setErrors] = useState({});
-  const [alertMessage, setAlertMessage] = useState({ text: "", type: "" }); // type: "success" | "error"
+  const [alertMessage, setAlertMessage] = useState({ text: "", type: "" });
 
   useEffect(() => {
     if (animalToEdit) {
-      setForm(animalToEdit);
+      setForm({
+        ...animalToEdit,
+        vaccines: animalToEdit.vaccines || [],
+      });
     }
   }, [animalToEdit]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors(prev => ({ ...prev, [e.target.name]: "" }));
+    setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
   };
+
+  // --- LÓGICA DE VACUNAS ---
+  const addVaccine = () => {
+    const newVaccine = { id: crypto.randomUUID(), name: "", date: "", price: 0 };
+    setForm((prev) => ({ ...prev, vaccines: [...prev.vaccines, newVaccine] }));
+  };
+
+  const updateVaccine = (vacId, field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      vaccines: prev.vaccines.map((v) => {
+        if (v.id !== vacId) return v;
+        const updated = { ...v, [field]: value };
+        
+        // Autocompletar precio si coincide con el catálogo
+        if (field === "name") {
+          const match = VACCINE_CATALOG[value.toLowerCase().trim()];
+          if (match) updated.price = match;
+        }
+        return updated;
+      }),
+    }));
+  };
+
+  const removeVaccine = (vacId) => {
+    setForm((prev) => ({
+      ...prev,
+      vaccines: prev.vaccines.filter((v) => v.id !== vacId),
+    }));
+  };
+  // -------------------------
 
   const validate = () => {
     const newErrors = {};
     if (!form.id.trim()) newErrors.id = "El ID es obligatorio";
-    if (!form.raza.trim()) newErrors.raza = "La raza o nombre del animal es obligatorio";
+    if (!form.raza.trim()) newErrors.raza = "La raza es obligatoria";
     return newErrors;
   };
 
   const showAlert = (text, type = "success") => {
     setAlertMessage({ text, type });
-    setTimeout(() => setAlertMessage({ text: "", type: "" }), 4000); // desaparece después de 4s
+    setTimeout(() => setAlertMessage({ text: "", type: "" }), 4000);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -51,47 +93,40 @@ function AnimalForm({ animalToEdit = null, onClose }) {
     try {
       const docRef = doc(db, "animales", form.id.trim());
 
-      // Verificar si el ID ya existe (solo al registrar)
       if (!animalToEdit) {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          showAlert("El ID ya existe, elige otro", "error");
+          showAlert("El ID ya existe", "error");
           return;
         }
       }
 
-      // Guardar o actualizar
+      // Guardamos en Firebase (limpiamos los IDs temporales de las vacunas si prefieres)
       await setDoc(docRef, {
-        id: form.id,
-        raza: form.raza,
-        fechaNacimiento: form.fechaNacimiento,
-        pesoInicial: form.pesoInicial ? Number(form.pesoInicial) : null,
-        fechaVacunacion: form.fechaVacunacion || null,
-        precioVenta: form.precioVenta 
+        ...form,
+        pesoInicial: Number(form.pesoInicial) || 0,
+        precioVenta: Number(form.precioVenta) || 0,
       });
 
-      showAlert(animalToEdit ? "¡Animal actualizado con éxito!" : "¡Animal registrado con éxito!", "success");
-
+      showAlert(animalToEdit ? "¡Actualizado!" : "¡Registrado!", "success");
       if (animalToEdit) onClose();
-      else setForm({ id: "", raza: "", fechaNacimiento: "", pesoInicial: "", fechaVacunacion: "", precioVenta: "" });
-
+      else setForm({ id: "", raza: "", fechaNacimiento: "", pesoInicial: "", precioVenta: "", vaccines: [] });
     } catch (error) {
       showAlert(error.message, "error");
     }
   };
 
   return (
-    <div className="relative">
-      {/* Mensaje dinámico (éxito o error) */}
+    <div className="relative max-w-2xl mx-auto">
       <AnimatePresence>
         {alertMessage.text && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={`absolute top-0 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl shadow-lg z-50 ${
-              alertMessage.type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"
-            }`}
+            className={`fixed top-5 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl z-50 ${
+              alertMessage.type === "success" ? "bg-green-500" : "bg-red-500"
+            } text-white font-bold`}
           >
             {alertMessage.text}
           </motion.div>
@@ -100,105 +135,128 @@ function AnimalForm({ animalToEdit = null, onClose }) {
 
       <motion.form
         onSubmit={handleSubmit}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="bg-slate-800 p-6 rounded-xl shadow-lg flex flex-col gap-4 mt-12"
+        className="bg-slate-800 p-8 rounded-2xl shadow-2xl flex flex-col gap-6 mt-10 border border-slate-700"
       >
-        {/* ID */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-400 font-bold">ID:</label>
-          <input
-            name="id"
-            placeholder="ID"
-            value={form.id}
-            onChange={handleChange}
-            disabled={!!animalToEdit}
-            className={`p-2 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 ${errors.id ? "focus:ring-red-500" : "focus:ring-purple-500"}`}
-          />
-          {errors.id && <span className="text-red-500 text-xs">{errors.id}</span>}
+        <h2 className="text-xl font-bold text-white border-b border-slate-700 pb-2">
+          {animalToEdit ? "Editar Expediente" : "Registro de Animal"}
+        </h2>
+
+        {/* Datos Básicos en Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400 font-bold uppercase">ID Control:</label>
+            <input
+              name="id"
+              value={form.id}
+              onChange={handleChange}
+              disabled={!!animalToEdit}
+              className={`p-2.5 rounded-lg bg-slate-900 text-white border ${errors.id ? "border-red-500" : "border-slate-600 focus:border-purple-500 outline-none"}`}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400 font-bold uppercase">Raza / Nombre:</label>
+            <input
+              name="raza"
+              value={form.raza}
+              onChange={handleChange}
+              className={`p-2.5 rounded-lg bg-slate-900 text-white border ${errors.raza ? "border-red-500" : "border-slate-600 focus:border-purple-500 outline-none"}`}
+            />
+          </div>
         </div>
 
-        {/* Raza */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-400 font-bold">Raza o Animal:</label>
-          <input
-            name="raza"
-            placeholder="Raza"
-            value={form.raza}
-            onChange={handleChange}
-            className={`p-2 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 ${errors.raza ? "focus:ring-red-500" : "focus:ring-purple-500"}`}
-          />
-          {errors.raza && <span className="text-red-500 text-xs">{errors.raza}</span>}
+        {/* Esquema de Vacunación */}
+        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-bold text-purple-400 uppercase tracking-wider">Esquema de Vacunación</h3>
+            <button
+              type="button"
+              onClick={addVaccine}
+              className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-3 py-1.5 rounded-lg transition-colors"
+            >
+              + Agregar Vacuna
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {form.vaccines.map((vac) => (
+              <div key={vac.id} className="flex flex-wrap md:flex-nowrap gap-2 items-end bg-slate-800 p-3 rounded-lg border border-slate-700">
+                <div className="flex-1 min-w-[140px]">
+                  <label className="text-[10px] text-slate-500 block">Vacuna</label>
+                  <input
+                    type="text"
+                    placeholder="Nombre"
+                    value={vac.name}
+                    onChange={(e) => updateVaccine(vac.id, "name", e.target.value)}
+                    className="w-full bg-transparent border-b border-slate-600 text-sm text-white focus:border-purple-500 outline-none"
+                  />
+                </div>
+                <div className="w-32">
+                  <label className="text-[10px] text-slate-500 block">Fecha</label>
+                  <input
+                    type="date"
+                    value={vac.date}
+                    onChange={(e) => updateVaccine(vac.id, "date", e.target.value)}
+                    className="w-full bg-transparent border-b border-slate-600 text-sm text-white focus:border-purple-500 outline-none"
+                  />
+                </div>
+                <div className="w-24">
+                  <label className="text-[10px] text-slate-500 block">Precio</label>
+                  <input
+                    type="number"
+                    value={vac.price}
+                    onChange={(e) => updateVaccine(vac.id, "price", e.target.value)}
+                    className="w-full bg-transparent border-b border-slate-600 text-sm text-white focus:border-purple-500 outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeVaccine(vac.id)}
+                  className="text-red-400 hover:text-red-300 p-1"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            {form.vaccines.length === 0 && (
+              <p className="text-center text-slate-500 text-xs py-2 italic">Sin vacunas registradas</p>
+            )}
+          </div>
         </div>
 
-        {/* Fecha de nacimiento */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-400 font-bold">Fecha de nacimiento:</label>
-          <input
-            type="date"
-            name="fechaNacimiento"
-            value={form.fechaNacimiento}
-            onChange={handleChange}
-            className="p-2 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+        {/* Otros campos */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400">Nacimiento:</label>
+            <input type="date" name="fechaNacimiento" value={form.fechaNacimiento} onChange={handleChange} className="p-2 rounded-lg bg-slate-700 text-white text-sm" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400">Peso (kg):</label>
+            <input name="pesoInicial" type="number" value={form.pesoInicial} onChange={handleChange} className="p-2 rounded-lg bg-slate-700 text-white text-sm" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400">Precio Venta:</label>
+            <input name="precioVenta" type="number" value={form.precioVenta} onChange={handleChange} className="p-2 rounded-lg bg-slate-700 text-white text-sm" />
+          </div>
         </div>
 
-        {/* Peso inicial */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-400 font-bold">Peso inicial:</label>
-          <input
-            name="pesoInicial"
-            placeholder="Peso inicial (kg)"
-            value={form.pesoInicial}
-            onChange={handleChange}
-            className="p-2 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-        </div>
-
-        {/* Fecha de vacunación */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-400 font-bold">Fecha de vacunación:</label>
-          <input
-            type="date"
-            name="fechaVacunacion"
-            value={form.fechaVacunacion || ""}
-            onChange={handleChange}
-            className="p-2 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-          />
-        </div>
-
-        {/* Precio venta */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-400 font-bold">Precio venta:</label>
-          <input
-            name="precioVenta"
-            placeholder="Precio venta $"
-            value={form.precioVenta}
-            onChange={handleChange}
-            className="p-2 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-        </div>
-
-        {/* Botones */}
-        <motion.button
-          whileHover={{ scale: 1.05, y: -2 }}
-          type="submit"
-          className={`${
-            animalToEdit ? "bg-yellow-500 hover:bg-yellow-600" : "bg-purple-600 hover:bg-purple-700"
-          } text-white font-bold py-2 rounded-lg`}
-        >
-          {animalToEdit ? "Actualizar" : "Registrar"}
-        </motion.button>
-
-        {animalToEdit && (
+        <div className="flex gap-3 mt-4">
           <button
-            type="button"
-            onClick={onClose}
-            className="bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg"
+            type="submit"
+            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95"
           >
-            Cancelar
+            {animalToEdit ? "Guardar Cambios" : "Registrar Animal"}
           </button>
-        )}
+          {animalToEdit && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-xl transition-all"
+            >
+              Cancelar
+            </button>
+          )}
+        </div>
       </motion.form>
     </div>
   );
