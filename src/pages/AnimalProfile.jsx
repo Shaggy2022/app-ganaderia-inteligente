@@ -21,4 +21,8 @@ function AnimalProfile() {
   );
 }
 
+const totalMedicamentos = medicamentos
+  .filter(m => m.animalId === animal.id)
+  .reduce((acc, m) => acc + m.costoTotal, 0);
+
 export default AnimalProfile;
