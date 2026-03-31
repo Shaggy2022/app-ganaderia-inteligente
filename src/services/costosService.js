@@ -27,7 +27,7 @@ export async function agregarCosto(animalId, costo) {
     monto: Number(costo.monto),
     fecha: costo.fecha,
     descripcion: costo.descripcion || "",
-    creadoEn: serverTimestamp(),
+    creadoEn: serverTimestamp()
   });
 }
 
@@ -44,6 +44,6 @@ export async function editarCosto(animalId, costoId, datos) {
     tipo: datos.tipo,
     monto: Number(datos.monto),
     fecha: datos.fecha,
-    descripcion: datos.descripcion || "",
+    descripcion: datos.descripcion || ""
   });
 }
