@@ -1,4 +1,5 @@
 import { db } from "../firebase/firebaseConfig";
+import { getDocs } from "firebase/firestore";
 import {
   collection,
   addDoc,
@@ -61,4 +62,23 @@ export const updateMedicamento = async (id, data) => {
 export const deleteMedicamento = async (id) => {
   const ref = doc(db, collectionName, id);
   return await deleteDoc(ref);
+};
+
+export const obtenerMedicamentosMasUsados = (medicamentos) => {
+  const conteo = {};
+
+  medicamentos.forEach((med) => {
+    const nombre = med.nombre || "Sin nombre";
+
+    if (!conteo[nombre]) {
+      conteo[nombre] = 0;
+    }
+
+    conteo[nombre] += Number(med.cantidad) || 0;
+  });
+
+  return Object.entries(conteo)
+    .map(([nombre, total]) => ({ nombre, total }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5); // Top 5
 };

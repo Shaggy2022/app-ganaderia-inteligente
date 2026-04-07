@@ -10,6 +10,7 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
     animalId: ""
   });
 
+  const [errores, setErrores] = useState({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -28,8 +29,43 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // 🔴 VALIDACIONES (HU12)
+  const validar = () => {
+    const nuevosErrores = {};
+
+    const cantidad = Number(form.cantidad);
+    const costoUnitario = Number(form.costoUnitario);
+    const hoy = new Date().toISOString().split("T")[0];
+
+    if (!form.nombre.trim()) {
+      nuevosErrores.nombre = "El nombre es obligatorio";
+    }
+
+    if (!form.fechaUso) {
+      nuevosErrores.fechaUso = "La fecha es obligatoria";
+    } else if (form.fechaUso > hoy) {
+      nuevosErrores.fechaUso = "No puede ser una fecha futura";
+    }
+
+    if (!form.cantidad || cantidad <= 0) {
+      nuevosErrores.cantidad = "Debe ser mayor a 0";
+    }
+
+    if (!form.costoUnitario || costoUnitario <= 0) {
+      nuevosErrores.costoUnitario = "Debe ser mayor a 0";
+    }
+
+    return nuevosErrores;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const erroresValidados = validar();
+    setErrores(erroresValidados);
+
+    if (Object.keys(erroresValidados).length > 0) return;
+
     setLoading(true);
 
     try {
@@ -37,17 +73,34 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
       const costoUnitario = Number(form.costoUnitario);
       const costoTotal = cantidad * costoUnitario;
 
-      const data = { ...form, cantidad, costoUnitario, costoTotal, updatedAt: new Date().toISOString() };
+      const data = {
+        ...form,
+        cantidad,
+        costoUnitario,
+        costoTotal,
+        updatedAt: new Date().toISOString()
+      };
 
       if (initialData?.id) {
         await updateMedicamento(initialData.id, data);
-        onSuccess && onSuccess(true); // edición
+        onSuccess && onSuccess(true);
       } else {
-        await addMedicamento({ ...data, createdAt: new Date().toISOString() });
-        onSuccess && onSuccess(false); // creación
+        await addMedicamento({
+          ...data,
+          createdAt: new Date().toISOString()
+        });
+        onSuccess && onSuccess(false);
       }
 
-      setForm({ nombre: "", fechaUso: "", cantidad: "", costoUnitario: "", animalId: "" });
+      setForm({
+        nombre: "",
+        fechaUso: "",
+        cantidad: "",
+        costoUnitario: "",
+        animalId: ""
+      });
+
+      setErrores({});
 
     } catch (error) {
       console.error(error);
@@ -59,56 +112,69 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <label className="text-xs text-slate-400 font-bold">Nombre del medicamento:</label>      
-      <input
-        name="nombre"
-        placeholder="Nombre del medicamento"
-        value={form.nombre}
-        onChange={handleChange}
-        required
-        className="w-full p-3 rounded-xl bg-slate-800 text-white border border-slate-700"
-      />
 
-      <label className="text-xs text-slate-400 font-bold">Fecha de uso:</label>      
-      <input
-        type="date"
-        name="fechaUso"
-        value={form.fechaUso}
-        onChange={handleChange}
-        required
-        className="w-full p-3 rounded-xl bg-slate-800 text-white border border-slate-700"
-      />
+      {/* NOMBRE */}
+      <div>
+        <label className="text-xs text-slate-400 font-bold">Nombre del medicamento:</label>
+        <input
+          name="nombre"
+          value={form.nombre}
+          onChange={handleChange}
+          className="w-full p-3 rounded-xl bg-slate-800 text-white border border-slate-700"
+        />
+        {errores.nombre && <p className="text-red-400 text-xs">{errores.nombre}</p>}
+      </div>
 
-      <label className="text-xs text-slate-400 font-bold">Cantidad:</label>      
-      <input
-        type="number"
-        name="cantidad"
-        placeholder="Cantidad"
-        value={form.cantidad}
-        onChange={handleChange}
-        required
-        className="w-full p-3 rounded-xl bg-slate-800 text-white border border-slate-700"
-      />
+      {/* FECHA */}
+      <div>
+        <label className="text-xs text-slate-400 font-bold">Fecha de uso:</label>
+        <input
+          type="date"
+          name="fechaUso"
+          value={form.fechaUso}
+          onChange={handleChange}
+          className="w-full p-3 rounded-xl bg-slate-800 text-white border border-slate-700"
+        />
+        {errores.fechaUso && <p className="text-red-400 text-xs">{errores.fechaUso}</p>}
+      </div>
 
-      <label className="text-xs text-slate-400 font-bold">Costo unitario:</label>      
-      <input
-        type="number"
-        name="costoUnitario"
-        placeholder="Costo unitario"
-        value={form.costoUnitario}
-        onChange={handleChange}
-        required
-        className="w-full p-3 rounded-xl bg-slate-800 text-white border border-slate-700"
-      />
+      {/* CANTIDAD */}
+      <div>
+        <label className="text-xs text-slate-400 font-bold">Cantidad:</label>
+        <input
+          type="number"
+          name="cantidad"
+          value={form.cantidad}
+          onChange={handleChange}
+          className="w-full p-3 rounded-xl bg-slate-800 text-white border border-slate-700"
+        />
+        {errores.cantidad && <p className="text-red-400 text-xs">{errores.cantidad}</p>}
+      </div>
 
-      <label className="text-xs text-slate-400 font-bold">ID del animal:</label>      
-      <input
-        name="animalId"
-        placeholder="ID animal (opcional)"
-        value={form.animalId}
-        onChange={handleChange}
-        className="w-full p-3 rounded-xl bg-slate-800 text-white border border-slate-700"
-      />
+      {/* COSTO */}
+      <div>
+        <label className="text-xs text-slate-400 font-bold">Costo unitario:</label>
+        <input
+          type="number"
+          name="costoUnitario"
+          value={form.costoUnitario}
+          onChange={handleChange}
+          className="w-full p-3 rounded-xl bg-slate-800 text-white border border-slate-700"
+        />
+        {errores.costoUnitario && <p className="text-red-400 text-xs">{errores.costoUnitario}</p>}
+      </div>
+
+      {/* ANIMAL */}
+      <div>
+        <label className="text-xs text-slate-400 font-bold">ID del animal:</label>
+        <input
+          name="animalId"
+          value={form.animalId}
+          onChange={handleChange}
+          className="w-full p-3 rounded-xl bg-slate-800 text-white border border-slate-700"
+        />
+        {errores.animalId && <p className="text-red-400 text-xs">{errores.animalId}</p>}
+      </div>
 
       <button
         type="submit"
