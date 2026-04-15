@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Pill, Wheat, Package } from "lucide-react";
+import { Pill, Wheat, Stethoscope } from "lucide-react";
 
 import MedicamentoList from "../components/MedicamentoList";
 import MedicamentoForm from "../components/MedicamentoForm";
+import VeterinariaTab from "../components/VeterinariaTab";
 
 export default function Inventory() {
   const [tab, setTab] = useState("medicamentos");
@@ -11,7 +12,8 @@ export default function Inventory() {
   const tabs = [
     { key: "medicamentos", label: "Medicamentos", icon: Pill },
     { key: "alimentos", label: "Alimentos", icon: Wheat },
-    { key: "veterinaria", label: "Veterinaria", icon: Package },
+    { key: "veterinaria", label: "Veterinaria", icon: Stethoscope },
+
   ];
 
   return (
@@ -65,12 +67,11 @@ export default function Inventory() {
           </div>
         )}
 
-        {tab === "veterinaria" && (
-          <div className="text-slate-400">
-            Próximamente inventario de veterinaria 🧪
-          </div>
-        )}
+        {tab === "veterinaria" && <VeterinariaTab />
+        }
       </motion.div>
     </div>
   );
 }
+
+
