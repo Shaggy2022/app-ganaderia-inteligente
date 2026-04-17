@@ -1,4 +1,4 @@
-// src/services/costosService.js
+
 import {
   collection,
   addDoc,
@@ -10,7 +10,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 
-export const TIPOS_COSTO = ["Alimentación", "Veterinario/Vacunas", "Medicamentos"];
+export const TIPOS_COSTO = ["Alimentación", "Vacunas", "Medicamentos"];
 
 // Obtener todos los costos de un animal
 export async function getCostosAnimal(animalId) {
