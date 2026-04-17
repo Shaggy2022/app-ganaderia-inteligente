@@ -58,7 +58,7 @@ export default function MedicamentoList() {
               <th className="p-5 text-left">Nombre</th>
               <th className="p-5 text-center">Fecha</th>
               <th className="p-5 text-center">Cantidad</th>
-              <th className="p-5 text-center">Costo</th>
+              <th className="p-5 text-center">Costo Total</th>
               <th className="p-5 text-right">Acciones</th>
             </tr>
           </thead>

@@ -1,15 +1,11 @@
-
-
-//Este componente de react va a mostrar reporte financiero. permite filtrar animales, visualizar kpi (indicadores) y ver el detalle de costos por cada animal de nuestra app
+// src/pages/ReporteFinanciero.jsx
 import { useEffect, useState, useCallback } from "react";
 import {
-  getReporteFinanciero, //trae todo el reporte con los filtros aplicados
-  getLotesDisponibles, //trae los lotes únicos para el filtro
-  getPeriodosDisponibles, //trae los años únicos para el filtro
+  getReporteFinanciero,
+  getLotesDisponibles,
+  getPeriodosDisponibles,
 } from "../services/financieroService";
 
-
-//esta funcion es para formatear dinero a formato colombiano, sin decimales
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -17,8 +13,6 @@ const fmt = (n) =>
     maximumFractionDigits: 0,
   }).format(n || 0);
 
-
-// Estado de utilidad (ganacia o perdida)
 const badgeUtilidad = (valor) => {
   if (valor > 0) return { label: "Ganancia", clase: "bg-green-900 text-green-300" };
   if (valor < 0) return { label: "Pérdida", clase: "bg-red-900 text-red-300" };
@@ -27,42 +21,34 @@ const badgeUtilidad = (valor) => {
 
 const colorRentabilidad = (v) => (v >= 0 ? "text-green-400" : "text-red-400");
 
-
-//(estados) hace parte del componente funcional react que se encarga de manejar el reporte financiero, con filtros por lote y periodo, mostrando KPIs y una tabla detallada de cada animal con sus costos, precio de venta, utilidad y rentabilidad. También incluye un sistema de expansión para ver el desglose de costos por animal.
 export default function ReporteFinanciero() {
-  const [data, setData]         = useState(null); //es un estado reactivo, datos del reporte
-  const [loading, setLoading]   = useState(true); //estado de carga
-  const [error, setError]       = useState(null);//mensajes de error
-  const [lotes, setLotes]       = useState([]); //lista de lotes disponibles
-  const [periodos, setPeriodos] = useState([]);//lista periodo
+  const [data, setData]         = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
+  const [lotes, setLotes]       = useState([]);
+  const [periodos, setPeriodos] = useState([]);
   const [filtroLote, setFiltroLote]       = useState("todos");
   const [filtroPeriodo, setFiltroPeriodo] = useState("todos");
-  const [expandido, setExpandido]         = useState(null); //id animal expandido para mostrar detalle de costos
+  const [expandido, setExpandido]         = useState(null);
 
-
-  //función principal para cargar el reporte con los filtros actuales 
   const cargar = useCallback(async () => {
     setLoading(true);
-    setError(null); //limpia de errores anteriores 
+    setError(null);
     try {
-      //llamamos al backend con filtros
-      const resultado = await getReporteFinanciero({ lote: filtroLote, periodo: filtroPeriodo }); //se dirige a Firebase
-      setData(resultado); //guarda los datos
+      const resultado = await getReporteFinanciero({ lote: filtroLote, periodo: filtroPeriodo });
+      setData(resultado);
     } catch {
-      setError("No se pudo cargar el reporte. Verifica tu conexión."); //mostramos el mensaje en caso de errores
+      setError("No se pudo cargar el reporte. Verifica tu conexión.");
     } finally {
       setLoading(false);
     }
   }, [filtroLote, filtroPeriodo]);
 
-
-  //carga los filtros al inicio y cada vez que cambian los filtros para actualizar el reporte
   useEffect(() => {
     getLotesDisponibles().then(setLotes);
     getPeriodosDisponibles().then(setPeriodos);
   }, []);
 
-  //cargar reporte cuando cambian los filtros
   useEffect(() => { cargar(); }, [cargar]);
 
   return (
@@ -86,6 +72,7 @@ export default function ReporteFinanciero() {
         ))}
 
         <span className="text-slate-600">|</span>
+
         <span className="text-slate-400 text-sm font-semibold">Período:</span>
         {["todos", ...periodos].map((p) => (
           <button
@@ -120,9 +107,6 @@ export default function ReporteFinanciero() {
 
       {!loading && !error && data && (
         <>
-
-          
-          
           {/* KPI Cards */}
           <div className="grid grid-cols-4 gap-6 mb-8">
             <div className="bg-slate-800 rounded-xl p-5 shadow-lg border-l-4 border-slate-500">
@@ -153,7 +137,7 @@ export default function ReporteFinanciero() {
           <div className="bg-slate-800 rounded-xl shadow-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
               <h2 className="text-xl font-bold">Detalle por Animal</h2>
-              
+              <span className="text-slate-400 text-sm">Haz clic en una fila para ver el desglose</span>
             </div>
 
             {data.animales.length === 0 ? (
@@ -164,7 +148,7 @@ export default function ReporteFinanciero() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-700 text-slate-400 text-xs uppercase tracking-wider">
-                    {["ID Animal", "Raza", "Lote", "Costos Totales", "Precio Venta", "Utilidad", "Rentab.%", "Estado", ""].map((h) => (
+                    {["ID Animal", "Raza", "Lote", "Costos Totales", "Precio Venta", "Utilidad", "Estado", ""].map((h) => (
                       <th key={h} className="px-5 py-3 text-left font-semibold">{h}</th>
                     ))}
                   </tr>
@@ -197,9 +181,6 @@ export default function ReporteFinanciero() {
                           <td className={`px-5 py-4 font-bold ${colorRentabilidad(animal.utilidad)}`}>
                             {fmt(animal.utilidad)}
                           </td>
-                          <td className={`px-5 py-4 font-bold ${colorRentabilidad(animal.rentabilidad)}`}>
-                            {animal.rentabilidad}%
-                          </td>
                           <td className="px-5 py-4">
                             <span className={`px-3 py-1 rounded-full text-xs font-bold ${badge.clase}`}>
                               {badge.label}
@@ -212,7 +193,7 @@ export default function ReporteFinanciero() {
 
                         {expandido === animal.id && (
                           <tr key={`detalle-${animal.id}`}>
-                            <td colSpan={9} className="bg-slate-900 border-b border-slate-700">
+                            <td colSpan={8} className="bg-slate-900 border-b border-slate-700">
                               <div className="px-8 py-5">
                                 <p className="text-sm font-bold text-green-400 mb-3">
                                   Desglose de Costos — {animal.id}
@@ -250,9 +231,6 @@ export default function ReporteFinanciero() {
                     <td className="px-5 py-4 text-pink-400">{fmt(data.resumen.ventaTotal)}</td>
                     <td className={`px-5 py-4 ${colorRentabilidad(data.resumen.utilidadTotal)}`}>
                       {fmt(data.resumen.utilidadTotal)}
-                    </td>
-                    <td className={`px-5 py-4 ${colorRentabilidad(data.resumen.rentabilidadTotal)}`}>
-                      {data.resumen.rentabilidadTotal}%
                     </td>
                     <td colSpan={2} />
                   </tr>

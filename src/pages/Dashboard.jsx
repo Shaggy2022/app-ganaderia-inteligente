@@ -1,5 +1,6 @@
+// src/pages/Dashboard.jsx
 import { useEffect, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import StatCard from "../components/StatCard";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -8,31 +9,58 @@ export default function Dashboard() {
   const [animales, setAnimales] = useState([]);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "animales"), snapshot => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setAnimales(docs);
-    });
-    return () => unsub();
+    const fetchAnimales = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "animales"));
+        const docs = await Promise.all(
+          snapshot.docs.map(async (doc) => {
+            const animal = { id: doc.id, ...doc.data() };
+
+            // Traer sub-collection costos
+            const costosSnap = await getDocs(collection(db, "animales", doc.id, "costos"));
+            animal.costos = costosSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+            // Traer sub-collection medicamentos
+            const medsSnap = await getDocs(collection(db, "animales", doc.id, "medicamentos"));
+            animal.medicamentos = medsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+            return animal;
+          })
+        );
+        setAnimales(docs);
+      } catch (err) {
+        console.error("Error cargando animales:", err);
+      }
+    };
+
+    fetchAnimales();
   }, []);
 
+  // KPIs
   const totalAnimales = animales.length;
 
-  // Peso promedio usando pesoInicial
-  const pesoPromedio = animales.length
-    ? (animales.reduce((acc, a) => acc + (a.pesoInicial || 0), 0) / animales.length).toFixed(1)
-    : 0;
+  const pesoPromedio =
+    animales.length > 0
+      ? (animales.reduce((acc, a) => acc + (a.pesoInicial || 0), 0) / animales.length).toFixed(1)
+      : 0;
 
-  // Consumo de alimento estimado como 2% del peso
+  const totalCostos = animales.reduce((acc, a) => {
+    const costos = (a.costos || []).reduce((s, c) => s + (c.monto || 0), 0);
+    const meds = (a.medicamentos || []).reduce((s, m) => s + (m.monto || 0), 0);
+    return acc + costos + meds;
+  }, 0);
+
   const consumoAlimento = animales.reduce((acc, a) => acc + ((a.pesoInicial || 0) * 0.02), 0).toFixed(1);
 
-  // Costo mensual estimado (ejemplo $50 por animal)
-  const costoMensual = animales.reduce((acc, a) => acc + 50, 0);
-
-  const data = animales.map((a, i) => ({
-    name: a.raza || `Animal ${i + 1}`,
-    Peso: a.pesoInicial || 0,
-    Costo: 50 // mismo costo estimado
-  }));
+  const data = animales.map((a, i) => {
+    const costos = (a.costos || []).reduce((s, c) => s + (c.monto || 0), 0);
+    const meds = (a.medicamentos || []).reduce((s, m) => s + (m.monto || 0), 0);
+    return {
+      name: a.raza || `Animal ${i + 1}`,
+      Peso: a.pesoInicial || 0,
+      Costo: costos + meds
+    };
+  });
 
   return (
     <div className="p-6">
@@ -41,7 +69,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-4 gap-6 mb-10">
         <StatCard title="Animales" value={totalAnimales} color="green" />
         <StatCard title="Peso Promedio" value={`${pesoPromedio}kg`} color="blue" />
-        <StatCard title="Costo Mensual" value={`$${costoMensual}`} color="pink" />
+        <StatCard title="Costo Total" value={`$${totalCostos}`} color="pink" />
         <StatCard title="Consumo Alimento" value={`${consumoAlimento}kg`} color="yellow" />
       </div>
 
