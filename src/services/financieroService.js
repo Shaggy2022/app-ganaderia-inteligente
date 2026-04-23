@@ -109,6 +109,7 @@ export async function getReporteFinanciero({ lote, periodo } = {}) {
         ...animalData,
         totalCostosBase,
         totalMedicamentos,
+        totalCostos,
         costos,
         medicamentos,
         precioVenta,
