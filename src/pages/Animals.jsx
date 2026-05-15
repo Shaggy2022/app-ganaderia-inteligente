@@ -23,7 +23,7 @@ export default function Animals() {
       <div className="max-w-6xl mx-auto">
         <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <h1 className="text-4xl font-black text-white tracking-tighter">GESTIÓN GANADERA</h1>
-          
+
           <div className="flex gap-3">
             {/* Botón de Guía Informativa */}
             <button
@@ -36,9 +36,8 @@ export default function Animals() {
             {!editingAnimal && (
               <button
                 onClick={() => setShowForm(!showForm)}
-                className={`${
-                  showForm ? "bg-red-600/20 text-red-500 border-red-500/50" : "bg-purple-600 text-white"
-                } font-bold px-5 py-2.5 rounded-xl border transition-all shadow-lg active:scale-95`}
+                className={`${showForm ? "bg-red-600/20 text-red-500 border-red-500/50" : "bg-purple-600 text-white"
+                  } font-bold px-5 py-2.5 rounded-xl border transition-all shadow-lg active:scale-95`}
               >
                 {showForm ? "Cerrar" : "+ Nuevo Animal"}
               </button>
@@ -60,7 +59,7 @@ export default function Animals() {
                   <h2 className="text-xl font-black text-white uppercase tracking-tight">Esquema Sugerido (Bovinos)</h2>
                   <button onClick={() => setShowGuide(false)} className="text-slate-400 hover:text-white text-2xl">✕</button>
                 </div>
-                
+
                 <div className="p-6 overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
@@ -81,7 +80,7 @@ export default function Animals() {
                     </tbody>
                   </table>
                 </div>
-                
+
                 <div className="p-6 bg-slate-800/30 text-center">
                   <p className="text-[10px] text-slate-500 font-bold uppercase">Consulte siempre con su médico veterinario y los ciclos oficiales del ICA.</p>
                 </div>
