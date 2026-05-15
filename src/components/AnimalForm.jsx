@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { motion, AnimatePresence } from "framer-motion";
+import { obtenerEspecies } from "../services/especieService";
+import { obtenerCategorias } from "../services/categoriaService";
+import { registrarAnimal } from "../services/animalService";
 
 // Catálogo para autocompletar precios
 const VACCINE_CATALOG = {
@@ -16,11 +19,25 @@ function AnimalForm({ animalToEdit = null, onClose }) {
   const [form, setForm] = useState({
     id: "",
     raza: "",
+    especie: "",
+    categoria: "",
     fechaNacimiento: "",
     pesoInicial: "",
     precioVenta: "",
     vaccines: [], // Aquí guardaremos el esquema
   });
+
+  const [especies, setEspecies] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setEspecies(await obtenerEspecies());
+      setCategorias(await obtenerCategorias());
+    };
+
+    loadData();
+  }, []);
 
   const [errors, setErrors] = useState({});
   const [alertMessage, setAlertMessage] = useState({ text: "", type: "" });
@@ -51,7 +68,7 @@ function AnimalForm({ animalToEdit = null, onClose }) {
       vaccines: prev.vaccines.map((v) => {
         if (v.id !== vacId) return v;
         const updated = { ...v, [field]: value };
-        
+
         // Autocompletar precio si coincide con el catálogo
         if (field === "name") {
           const match = VACCINE_CATALOG[value.toLowerCase().trim()];
@@ -74,6 +91,8 @@ function AnimalForm({ animalToEdit = null, onClose }) {
     const newErrors = {};
     if (!form.id.trim()) newErrors.id = "El ID es obligatorio";
     if (!form.raza.trim()) newErrors.raza = "La raza es obligatoria";
+    if (!form.especie) newErrors.especie = "Debe seleccionar una especie";
+    if (!form.categoria) newErrors.categoria = "Debe seleccionar una categoría";
     return newErrors;
   };
 
@@ -91,26 +110,13 @@ function AnimalForm({ animalToEdit = null, onClose }) {
     }
 
     try {
-      const docRef = doc(db, "animales", form.id.trim());
-
-      if (!animalToEdit) {
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          showAlert("El ID ya existe", "error");
-          return;
-        }
-      }
 
       // Guardamos en Firebase (limpiamos los IDs temporales de las vacunas si prefieres)
-      await setDoc(docRef, {
-        ...form,
-        pesoInicial: Number(form.pesoInicial) || 0,
-        precioVenta: Number(form.precioVenta) || 0,
-      });
+      await registrarAnimal(form, !!animalToEdit);
 
       showAlert(animalToEdit ? "¡Actualizado!" : "¡Registrado!", "success");
       if (animalToEdit) onClose();
-      else setForm({ id: "", raza: "", fechaNacimiento: "", pesoInicial: "", precioVenta: "", vaccines: [] });
+      else setForm({ id: "", raza: "", especie: "", categoria: "", fechaNacimiento: "", pesoInicial: "", precioVenta: "", vaccines: [] });
     } catch (error) {
       showAlert(error.message, "error");
     }
@@ -124,9 +130,8 @@ function AnimalForm({ animalToEdit = null, onClose }) {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={`fixed top-5 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl z-50 ${
-              alertMessage.type === "success" ? "bg-green-500" : "bg-red-500"
-            } text-white font-bold`}
+            className={`fixed top-5 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl z-50 ${alertMessage.type === "success" ? "bg-green-500" : "bg-red-500"
+              } text-white font-bold`}
           >
             {alertMessage.text}
           </motion.div>
@@ -152,6 +157,11 @@ function AnimalForm({ animalToEdit = null, onClose }) {
               disabled={!!animalToEdit}
               className={`p-2.5 rounded-lg bg-slate-900 text-white border ${errors.id ? "border-red-500" : "border-slate-600 focus:border-purple-500 outline-none"}`}
             />
+            {errors.id && (
+              <p className="text-red-500 text-xs mt-1 font-bold">
+                {errors.id}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1">
@@ -162,6 +172,13 @@ function AnimalForm({ animalToEdit = null, onClose }) {
               onChange={handleChange}
               className={`p-2.5 rounded-lg bg-slate-900 text-white border ${errors.raza ? "border-red-500" : "border-slate-600 focus:border-purple-500 outline-none"}`}
             />
+            {
+              errors.raza && (
+                <p className="text-red-500 text-xs mt-1 font-bold">
+                  {errors.raza}
+                </p>
+              )
+            }
           </div>
         </div>
 
@@ -223,6 +240,48 @@ function AnimalForm({ animalToEdit = null, onClose }) {
             )}
           </div>
         </div>
+
+        <select
+          name="especie"
+          value={form.especie}
+          onChange={handleChange}
+          className="p-2 rounded-lg bg-slate-900 text-white"
+        >
+          <option value="">Seleccione especie</option>
+          {especies.map((e) => (
+            <option key={e.id} value={e.nombre}>
+              {e.nombre}
+            </option>
+          ))}
+        </select>
+        {
+          errors.especie && (
+            <p className="text-red-500 text-xs mt-1 font-bold">
+              {errors.especie}
+            </p>
+          )
+        }
+
+        <select
+          name="categoria"
+          value={form.categoria}
+          onChange={handleChange}
+          className="p-2 rounded-lg bg-slate-900 text-white"
+        >
+          <option value="">Seleccione categoría</option>
+          {categorias.map((c) => (
+            <option key={c.id} value={c.nombre}>
+              {c.nombre}
+            </option>
+          ))}
+        </select>
+        {
+          errors.categoria && (
+            <p className="text-red-500 text-xs mt-1 font-bold">
+              {errors.categoria}
+            </p>
+          )
+        }
 
         {/* Otros campos */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
