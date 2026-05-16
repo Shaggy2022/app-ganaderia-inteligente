@@ -1,13 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Beef, DollarSign, TrendingUp, Archive } from "lucide-react";
+import { Home, Beef, Wheat, DollarSign, TrendingUp, Archive } from "lucide-react";
 
 const menu = [
-  { name: "Dashboard",    icon: Home,       path: "/"                   },
-  { name: "Animales",     icon: Beef,        path: "/animals"            },
-  { name: "Costos",       icon: DollarSign,  path: "/costs"              },
-  { name: "Inventario",   icon: Archive,     path: "/inventory"          },
-  { name: "Rentabilidad", icon: TrendingUp,  path: "/reporte-financiero" },
+  { name: "Dashboard", icon: Home, path: "/" },
+  { name: "Animales", icon: Beef, path: "/animals" },
+  { name: "Costos", icon: DollarSign, path: "/costs" },
+  { name: "Inventario", icon: Archive, path: "/inventory" },
+  { name: "Rentabilidad", icon: TrendingUp, path: "/reporte-financiero" },
 ];
 
 export default function Sidebar() {
@@ -17,7 +17,7 @@ export default function Sidebar() {
     <motion.div
       initial={{ x: -250 }}
       animate={{ x: 0 }}
-      className="w-64 h-screen p-6 bg-gradient-to-b from-indigo-700 via-purple-700 to-pink-600 shadow-lg"
+      className="w-64 min-h-screen p-6 bg-gradient-to-b from-indigo-700 via-purple-700 to-pink-600 shadow-lg"
     >
       <h1 className="text-3xl font-bold mb-10 text-white tracking-wide">🐄 GanadApp</h1>
 
