@@ -4,6 +4,8 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { getDocs } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { AnimatePresence } from "framer-motion";
+import ModalProgramarVisita from "./ModalProgramarVisita";
+import CalendarioVeterinario from "../pages/CalendarioVeterinario";
 import {
   addServicioVet,
   updateServicioVet,
@@ -46,6 +48,10 @@ export default function VeterinariaTab() {
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState("");
   const [alert, setAlert]           = useState("");
+  const [showProgramar, setShowProgramar] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null); 
+  const [vistaActiva, setVistaActiva] = useState("registros");
+  ("registros"); // "registros" | "calendario"
 
   // Escucha en tiempo real los servicios veterinarios
   useEffect(() => {
@@ -142,110 +148,163 @@ export default function VeterinariaTab() {
     }
   };
 
-  const handleEliminar = async (s) => {
-    if (!window.confirm(`¿Eliminar "${s.tipoServicio}" del animal ${s.animalId}? También se eliminará el costo vinculado.`)) return;
-    await deleteServicioVet(s.id, s.animalId, s.costoId);
+  const handleEliminar = (s) => {
+  setConfirmDelete(s);
+};
+
+  const confirmarEliminar = async () => {
+    if (!confirmDelete) return;
+    await deleteServicioVet(confirmDelete.id, confirmDelete.animalId, confirmDelete.costoId);
     showAlerta("Servicio eliminado y costo actualizado ✅");
+    setConfirmDelete(null);
   };
+  
 
   const totalGastado = servicios.reduce((acc, s) => acc + (s.costoTotal || 0), 0);
 
   return (
     <div className="bg-slate-900 rounded-3xl border border-slate-700 shadow-2xl overflow-hidden mt-6">
 
+      
       {/* HEADER */}
-      <div className="p-8 bg-slate-800/50 flex justify-between items-center flex-wrap gap-4">
-        <div>
-          <h2 className="text-3xl font-black text-white">VETERINARIA</h2>
-          <p className="text-slate-400 text-sm mt-1">
-            Total invertido: <span className="text-emerald-400 font-bold">{fmt(totalGastado)}</span>
-          </p>
-        </div>
-        <div className="flex gap-4 items-center">
-          <span className="bg-slate-700 px-4 py-1 rounded-full text-sm text-white">
-            Registros: {servicios.length}
-          </span>
-          <button
-            onClick={abrirNuevo}
-            className="bg-indigo-600 px-4 py-2 rounded-xl text-white font-bold hover:bg-indigo-500 transition-all"
-          >
-            + Registrar servicio
-          </button>
-        </div>
-      </div>
+<div className="p-8 bg-slate-800/50">
+  <div className="flex justify-between items-center flex-wrap gap-4 mb-6">
+    <div>
+      <h2 className="text-3xl font-black text-white">VETERINARIA</h2>
+      <p className="text-slate-400 text-sm mt-1">
+        Total invertido: <span className="text-emerald-400 font-bold">{fmt(totalGastado)}</span>
+      </p>
+    </div>
+    <div className="flex gap-4 items-center">
+      <span className="bg-slate-700 px-4 py-1 rounded-full text-sm text-white">
+        Registros: {servicios.length}
+      </span>
+      <button
+        onClick={abrirNuevo}
+        className="bg-indigo-600 px-4 py-2 rounded-xl text-white font-bold hover:bg-indigo-500 transition-all"
+      >
+        + Registrar servicio
+      </button>
+      <button
+        onClick={() => setShowProgramar(true)}
+        className="bg-slate-600 px-4 py-2 rounded-xl text-white font-bold hover:bg-slate-500 transition-all"
+      >
+        📅 Programar visita
+      </button>
+    </div>
+  </div>
+
+  {/* PESTAÑAS INTERNAS */}
+  <div className="flex gap-3">
+    <button
+      onClick={() => setVistaActiva("registros")}
+      className={`px-5 py-2 rounded-xl text-sm font-bold transition-all
+        ${vistaActiva === "registros"
+          ? "bg-indigo-600 text-white"
+          : "bg-slate-700 text-slate-400 hover:bg-slate-600"}`}
+    >
+      📋 Registros
+    </button>
+    <button
+      onClick={() => setVistaActiva("calendario")}
+      className={`px-5 py-2 rounded-xl text-sm font-bold transition-all
+        ${vistaActiva === "calendario"
+          ? "bg-indigo-600 text-white"
+          : "bg-slate-700 text-slate-400 hover:bg-slate-600"}`}
+    >
+      📅 Mi calendario veterinario
+    </button>
+  </div>
+</div>
 
       {/* ALERTA */}
-      {alert && (
-        <div className="mx-8 mt-4 bg-green-900 border border-green-700 text-green-300 rounded-xl px-5 py-3 text-sm font-semibold">
-          {alert}
+      {/* CONTENIDO SEGÚN PESTAÑA */}
+      {vistaActiva === "registros" && (
+        <>
+          {/* ALERTA */}
+          {alert && (
+            <div className="mx-8 mt-4 bg-green-900 border border-green-700 text-green-300 rounded-xl px-5 py-3 text-sm font-semibold">
+              {alert}
+            </div>
+          )}
+
+          {/* TABLA */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-slate-400 text-xs border-b border-slate-800 uppercase tracking-wider">
+                  <th className="p-5 text-left">Tipo de servicio</th>
+                  <th className="p-5 text-center">Animal</th>
+                  <th className="p-5 text-center">Fecha</th>
+                  <th className="p-5 text-center">Cantidad</th>
+                  <th className="p-5 text-center">Costo unitario</th>
+                  <th className="p-5 text-center">Costo total</th>
+                  <th className="p-5 text-left">Descripción</th>
+                  <th className="p-5 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {servicios.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-14 text-center text-slate-500">
+                      No hay servicios veterinarios registrados aún.
+                    </td>
+                  </tr>
+                ) : (
+                  servicios.map((s) => (
+                    <tr
+                      key={s.id}
+                      className="border-b border-slate-800 hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="p-5">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${BADGE[s.tipoServicio] || "bg-slate-700 text-slate-300"}`}>
+                          {s.tipoServicio}
+                        </span>
+                      </td>
+                      <td className="p-5 text-center">
+                        <span className="bg-blue-900 text-blue-300 px-3 py-1 rounded-full text-xs font-bold">
+                          {s.animalId}
+                        </span>
+                      </td>
+                      <td className="p-5 text-center text-slate-300">{s.fecha}</td>
+                      <td className="p-5 text-center text-slate-300">{s.cantidad}</td>
+                      <td className="p-5 text-center text-slate-400">{fmt(s.costo)}</td>
+                      <td className="p-5 text-center text-emerald-400 font-bold">{fmt(s.costoTotal)}</td>
+                      <td className="p-5 text-slate-400 text-sm">{s.descripcion || "—"}</td>
+                      <td className="p-5">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => abrirEditar(s)}
+                            className="bg-blue-600/10 text-blue-400 px-3 py-1 rounded-xl hover:bg-blue-600 hover:text-white transition-all text-sm"
+                          >
+                            EDITAR
+                          </button>
+                          <button
+                            onClick={() => handleEliminar(s)}
+                            className="bg-red-600/10 text-red-400 px-3 py-1 rounded-xl hover:bg-red-600 hover:text-white transition-all text-sm"
+                          >
+                            ELIMINAR
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* CALENDARIO */}
+      {vistaActiva === "calendario" && (
+        <div className="p-4">
+          <CalendarioVeterinario />
         </div>
       )}
 
-      {/* TABLA */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="text-slate-400 text-xs border-b border-slate-800 uppercase tracking-wider">
-              <th className="p-5 text-left">Tipo de servicio</th>
-              <th className="p-5 text-center">Animal</th>
-              <th className="p-5 text-center">Fecha</th>
-              <th className="p-5 text-center">Cantidad</th>
-              <th className="p-5 text-center">Costo unitario</th>
-              <th className="p-5 text-center">Costo total</th>
-              <th className="p-5 text-left">Descripción</th>
-              <th className="p-5 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {servicios.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="p-14 text-center text-slate-500">
-                  No hay servicios veterinarios registrados aún.
-                </td>
-              </tr>
-            ) : (
-              servicios.map((s) => (
-                <tr
-                  key={s.id}
-                  className="border-b border-slate-800 hover:bg-slate-800/40 transition-colors"
-                >
-                  <td className="p-5">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${BADGE[s.tipoServicio] || "bg-slate-700 text-slate-300"}`}>
-                      {s.tipoServicio}
-                    </span>
-                  </td>
-                  <td className="p-5 text-center">
-                    <span className="bg-blue-900 text-blue-300 px-3 py-1 rounded-full text-xs font-bold">
-                      {s.animalId}
-                    </span>
-                  </td>
-                  <td className="p-5 text-center text-slate-300">{s.fecha}</td>
-                  <td className="p-5 text-center text-slate-300">{s.cantidad}</td>
-                  <td className="p-5 text-center text-slate-400">{fmt(s.costo)}</td>
-                  <td className="p-5 text-center text-emerald-400 font-bold">{fmt(s.costoTotal)}</td>
-                  <td className="p-5 text-slate-400 text-sm">{s.descripcion || "—"}</td>
-                  <td className="p-5">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => abrirEditar(s)}
-                        className="bg-blue-600/10 text-blue-400 px-3 py-1 rounded-xl hover:bg-blue-600 hover:text-white transition-all text-sm"
-                      >
-                        EDITAR
-                      </button>
-                      <button
-                        onClick={() => handleEliminar(s)}
-                        className="bg-red-600/10 text-red-400 px-3 py-1 rounded-xl hover:bg-red-600 hover:text-white transition-all text-sm"
-                      >
-                        ELIMINAR
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      
+      
 
       {/* MODAL FORMULARIO */}
       <AnimatePresence>
@@ -404,6 +463,47 @@ export default function VeterinariaTab() {
           </div>
         )}
       </AnimatePresence>
+      {/* MODAL PROGRAMAR VISITA */}
+      {showProgramar && (
+        <ModalProgramarVisita
+          animales={animales}
+          onGuardar={() => setShowProgramar(false)}
+          onCerrar={() => setShowProgramar(false)}
+        />
+      )}
+
+      
+
+    {/* MODAL CONFIRMACIÓN ELIMINAR */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4">
+          <div className="bg-slate-900 p-6 rounded-2xl w-full max-w-sm border border-slate-700 text-center">
+            <div className="text-4xl mb-4">🗑️</div>
+            <h3 className="text-white font-bold text-lg mb-2">¿Eliminar servicio?</h3>
+            <p className="text-slate-400 text-sm mb-6">
+              Se eliminará{" "}
+              <span className="text-white font-semibold">{confirmDelete.tipoServicio}</span>{" "}
+              del animal{" "}
+              <span className="text-white font-semibold">{confirmDelete.animalId}</span>{" "}
+              junto con su costo vinculado. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={confirmarEliminar}
+                className="bg-red-600 hover:bg-red-500 text-white px-6 py-2 rounded-xl font-bold transition-all"
+              >
+                Sí, eliminar
+              </button>
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-xl font-bold transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

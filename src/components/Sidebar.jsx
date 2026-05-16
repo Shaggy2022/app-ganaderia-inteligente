@@ -1,13 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Beef, Wheat, DollarSign, TrendingUp, Archive } from "lucide-react";
+import { Home, Beef, DollarSign, TrendingUp, Archive } from "lucide-react";
 
 const menu = [
-  { name: "Dashboard", icon: Home, path: "/" },
-  { name: "Animales", icon: Beef, path: "/animals" },
-  { name: "Costos", icon: DollarSign, path: "/costs" },
-  { name: "Inventario", icon: Archive, path: "/inventory" },
-  { name: "Rentabilidad", icon: TrendingUp, path: "/reporte-financiero" },
+  { name: "Dashboard",    icon: Home,       path: "/"                   },
+  { name: "Animales",     icon: Beef,        path: "/animals"            },
+  { name: "Costos",       icon: DollarSign,  path: "/costs"              },
+  { name: "Inventario",   icon: Archive,     path: "/inventory"          },
+  { name: "Rentabilidad", icon: TrendingUp,  path: "/reporte-financiero" },
 ];
 
 export default function Sidebar() {

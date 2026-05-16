@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Pill, Wheat, Stethoscope } from "lucide-react";
+import { Pill, Wheat, Stethoscope } from "lucide-react";  // ← quita CalendarDays
 
 import MedicamentoList from "../components/MedicamentoList";
 import MedicamentoForm from "../components/MedicamentoForm";
 import VeterinariaTab from "../components/VeterinariaTab";
+
 
 export default function Inventory() {
   const [tab, setTab] = useState("medicamentos");
@@ -13,6 +14,7 @@ export default function Inventory() {
     { key: "medicamentos", label: "Medicamentos", icon: Pill },
     { key: "alimentos", label: "Alimentos", icon: Wheat },
     { key: "veterinaria", label: "Veterinaria", icon: Stethoscope },
+    
 
   ];
 
@@ -65,6 +67,7 @@ export default function Inventory() {
 
         {tab === "veterinaria" && <VeterinariaTab />
         }
+        
       </motion.div>
     </div>
   );
