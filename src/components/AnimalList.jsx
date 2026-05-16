@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"; 
+import { useEffect, useState } from "react";
 import { collection, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,6 +7,15 @@ export default function AnimalList({ setEditingAnimal }) {
   const [animales, setAnimales] = useState([]);
   const [vencidos, setVencidos] = useState([]);
   const [mostrarAlerta, setMostrarAlerta] = useState(false);
+  const [filtroEspecie, setFiltroEspecie] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState([]);
+
+  const animalesFiltrados = animales.filter((a) => {
+    return (
+      (!filtroEspecie || a.especie === filtroEspecie) &&
+      (!filtroCategoria || a.categoria === filtroCategoria)
+    );
+  });
 
   // --- Obtener la vacuna más reciente ---
   const getLastVaccine = (vaccines = []) => {
@@ -30,10 +39,10 @@ export default function AnimalList({ setEditingAnimal }) {
 
     // Comparar solo la fecha sin horas
     const hoy = new Date();
-    hoy.setHours(0,0,0,0);
+    hoy.setHours(0, 0, 0, 0);
 
     const fechaVac = new Date(lastVaccine.date);
-    fechaVac.setHours(0,0,0,0);
+    fechaVac.setHours(0, 0, 0, 0);
 
     if (fechaVac < hoy) {
       return { txt: "VENCIDA", css: "bg-red-600 text-white animate-pulse" };
@@ -48,37 +57,37 @@ export default function AnimalList({ setEditingAnimal }) {
   };
 
   useEffect(() => {
-  const unsub = onSnapshot(collection(db, "animales"), (snapshot) => {
-    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const unsub = onSnapshot(collection(db, "animales"), (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // Creamos copia de vacunas para React
-    const animalesConCopias = docs.map(animal => ({
-      ...animal,
-      vaccines: animal.vaccines ? [...animal.vaccines] : []
-    }));
+      // Creamos copia de vacunas para React
+      const animalesConCopias = docs.map(animal => ({
+        ...animal,
+        vaccines: animal.vaccines ? [...animal.vaccines] : []
+      }));
 
-    setAnimales(animalesConCopias);
+      setAnimales(animalesConCopias);
 
-    // Verificar vencidos usando solo la última vacuna
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);  // Limpiamos la hora para comparar sólo fechas
+      // Verificar vencidos usando solo la última vacuna
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);  // Limpiamos la hora para comparar sólo fechas
 
-    const listaVencidos = docs.filter(animal => {
-    return animal.vaccines?.some(v => {
-      if (!v.date) return false;
+      const listaVencidos = docs.filter(animal => {
+        return animal.vaccines?.some(v => {
+          if (!v.date) return false;
 
-      const fechaVac = new Date(v.date);
-      fechaVac.setHours(0, 0, 0, 0); // Solo fecha
+          const fechaVac = new Date(v.date);
+          fechaVac.setHours(0, 0, 0, 0); // Solo fecha
 
-      return fechaVac < hoy;
+          return fechaVac < hoy;
+        });
+      });
+
+      setVencidos(listaVencidos);
+      setMostrarAlerta(listaVencidos.length > 0);
     });
-  });
 
-    setVencidos(listaVencidos);
-    setMostrarAlerta(listaVencidos.length > 0);
-  });
-
-  return () => unsub();
+    return () => unsub();
   }, []);
 
   const handleDelete = async (id) => {
@@ -92,7 +101,7 @@ export default function AnimalList({ setEditingAnimal }) {
       {/* Alerta de Vacunas Vencidas */}
       <AnimatePresence>
         {mostrarAlerta && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 100 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 100 }}
@@ -125,6 +134,8 @@ export default function AnimalList({ setEditingAnimal }) {
               <tr className="bg-slate-800/30 text-slate-500 text-[10px] uppercase tracking-[0.2em] border-b border-slate-800">
                 <th className="p-6 font-black">Identificación / Raza</th>
                 <th className="p-6 font-black text-center">Última Vacuna</th>
+                <th className="p-5 font-black text-center">Especie</th>
+                <th className="p-5 font-black text-center">Categoría</th>
                 <th className="p-6 font-black text-center">Estado Sanitario</th>
                 <th className="p-6 font-black text-right">Gestión</th>
               </tr>
@@ -137,7 +148,7 @@ export default function AnimalList({ setEditingAnimal }) {
                 const ultimaFecha = ultimaVac ? ultimaVac.date : "---";
 
                 return (
-                  <motion.tr 
+                  <motion.tr
                     key={animal.id}
                     layout
                     className="hover:bg-slate-800/40 transition-colors group"
@@ -160,7 +171,18 @@ export default function AnimalList({ setEditingAnimal }) {
                       </div>
                     </td>
 
-                    <td className="p-6 text-center">
+                    <td className="p-1 text-center">
+                      <div className="text-white font-black text-lg uppercase tracking-tight group-hover:text-purple-400 transition-colors">
+                        {animal.especie}
+                      </div>
+                    </td>
+                    <td className="p-1 text-center">
+                      <div className="text-white font-black text-lg uppercase tracking-tight group-hover:text-purple-400 transition-colors">
+                        {animal.categoria}
+                      </div>
+                    </td>
+
+                    <td className="p-5 text-center">
                       <span
                         className={`px-4 py-2 rounded-xl text-[10px] font-black tracking-widest border ${status.css}`}
                       >
@@ -168,16 +190,16 @@ export default function AnimalList({ setEditingAnimal }) {
                       </span>
                     </td>
 
-                    <td className="p-6">
+                    <td className="p-3">
                       <div className="flex justify-end gap-3">
-                        <button 
+                        <button
                           onClick={() => setEditingAnimal({ ...animal })} // crear copia para evitar referencias antiguas
                           className="bg-white text-slate-900 px-4 py-2 rounded-xl font-black text-[10px] hover:bg-purple-500 hover:text-white transition-all shadow-lg active:scale-95"
                         >
                           VER DETALLES
                         </button>
 
-                        <button 
+                        <button
                           onClick={() => handleDelete(animal.id)}
                           className="bg-red-600/10 text-red-500 p-2.5 rounded-xl hover:bg-red-600 hover:text-white transition-all"
                         >

@@ -6,6 +6,7 @@ import Costs from "./pages/Costs";
 import Inventory from "./pages/Inventory";
 import ReporteFinanciero from "./pages/ReporteFinanciero";
 
+
 function App() {
   return (
     <BrowserRouter>
@@ -16,6 +17,7 @@ function App() {
           <Route path="/costs" element={<Costs />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/reporte-financiero" element={<ReporteFinanciero />} />
+          
         </Routes>
       </MainLayout>
     </BrowserRouter>

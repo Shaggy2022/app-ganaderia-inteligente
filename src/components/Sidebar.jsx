@@ -17,7 +17,7 @@ export default function Sidebar() {
     <motion.div
       initial={{ x: -250 }}
       animate={{ x: 0 }}
-      className="w-64 h-screen p-6 bg-gradient-to-b from-indigo-700 via-purple-700 to-pink-600 shadow-lg"
+      className="w-64 min-h-screen p-6 bg-gradient-to-b from-indigo-700 via-purple-700 to-pink-600 shadow-lg"
     >
       <h1 className="text-3xl font-bold mb-10 text-white tracking-wide">🐄 GanadApp</h1>
 
