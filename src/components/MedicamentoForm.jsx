@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { addMedicamento, updateMedicamento } from "../services/medicamentoService";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase/firebaseConfig";
 
 const MedicamentoForm = ({ onSuccess, initialData }) => {
+
+  // ✅ ANIMALES
+  const [animales, setAnimales] = useState([]);
+
+  // ✅ FORM
   const [form, setForm] = useState({
     nombre: "",
     fechaUso: "",
@@ -13,6 +20,21 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
   const [errores, setErrores] = useState({});
   const [loading, setLoading] = useState(false);
 
+  // ✅ CARGAR ANIMALES
+  useEffect(() => {
+    const cargarAnimales = async () => {
+      const snap = await getDocs(collection(db, "animales"));
+      const lista = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+      setAnimales(lista);
+    };
+
+    cargarAnimales();
+  }, []);
+
+  // ✅ CARGAR DATOS SI EDITA
   useEffect(() => {
     if (initialData) {
       setForm({
@@ -29,7 +51,7 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // 🔴 VALIDACIONES (HU12)
+  // ✅ VALIDACIÓN
   const validar = () => {
     const nuevosErrores = {};
 
@@ -53,6 +75,10 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
 
     if (!form.costoUnitario || costoUnitario <= 0) {
       nuevosErrores.costoUnitario = "Debe ser mayor a 0";
+    }
+
+    if (!form.animalId) {
+      nuevosErrores.animalId = "Debe seleccionar un animal";
     }
 
     return nuevosErrores;
@@ -92,6 +118,7 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
         onSuccess && onSuccess(false);
       }
 
+      // ✅ LIMPIAR
       setForm({
         nombre: "",
         fechaUso: "",
@@ -115,7 +142,9 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
 
       {/* NOMBRE */}
       <div>
-        <label className="text-xs text-slate-400 font-bold">Nombre del medicamento:</label>
+        <label className="text-xs text-slate-400 font-bold">
+          Nombre del medicamento:
+        </label>
         <input
           name="nombre"
           value={form.nombre}
@@ -127,7 +156,9 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
 
       {/* FECHA */}
       <div>
-        <label className="text-xs text-slate-400 font-bold">Fecha de uso:</label>
+        <label className="text-xs text-slate-400 font-bold">
+          Fecha de uso:
+        </label>
         <input
           type="date"
           name="fechaUso"
@@ -140,7 +171,9 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
 
       {/* CANTIDAD */}
       <div>
-        <label className="text-xs text-slate-400 font-bold">Cantidad:</label>
+        <label className="text-xs text-slate-400 font-bold">
+          Cantidad:
+        </label>
         <input
           type="number"
           name="cantidad"
@@ -153,7 +186,9 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
 
       {/* COSTO */}
       <div>
-        <label className="text-xs text-slate-400 font-bold">Costo unitario:</label>
+        <label className="text-xs text-slate-400 font-bold">
+          Costo unitario:
+        </label>
         <input
           type="number"
           name="costoUnitario"
@@ -164,24 +199,42 @@ const MedicamentoForm = ({ onSuccess, initialData }) => {
         {errores.costoUnitario && <p className="text-red-400 text-xs">{errores.costoUnitario}</p>}
       </div>
 
-      {/* ANIMAL */}
+      {/* ✅ SELECT DE ANIMAL */}
       <div>
-        <label className="text-xs text-slate-400 font-bold">ID del animal:</label>
-        <input
+        <label className="text-xs text-slate-400 font-bold">
+          Animal:
+        </label>
+        <select
           name="animalId"
           value={form.animalId}
           onChange={handleChange}
           className="w-full p-3 rounded-xl bg-slate-800 text-white border border-slate-700"
-        />
-        {errores.animalId && <p className="text-red-400 text-xs">{errores.animalId}</p>}
+        >
+          <option value="">Selecciona un animal</option>
+
+          {animales.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.id} - {a.raza}
+            </option>
+          ))}
+        </select>
+
+        {errores.animalId && (
+          <p className="text-red-400 text-xs">{errores.animalId}</p>
+        )}
       </div>
 
+      {/* BOTÓN */}
       <button
         type="submit"
         disabled={loading}
         className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold"
       >
-        {loading ? "Guardando..." : initialData ? "Actualizar medicamento" : "Guardar medicamento"}
+        {loading
+          ? "Guardando..."
+          : initialData
+          ? "Actualizar medicamento"
+          : "Guardar medicamento"}
       </button>
     </form>
   );

@@ -187,9 +187,16 @@ export default function Animals() {
         </AnimatePresence>
 
         {/* FORMULARIO ANIMAL */}
-        {showForm && (
-          <AnimalForm onClose={() => setShowForm(false)} />
+        {(showForm || editingAnimal) && (
+          <AnimalForm
+            animalToEdit={editingAnimal}
+            onClose={() => {
+              setShowForm(false);
+              setEditingAnimal(null);
+            }}
+          />
         )}
+
 
         {/* LISTA ANIMALES */}
         <AnimalList setEditingAnimal={setEditingAnimal} />

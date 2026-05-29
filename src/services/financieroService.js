@@ -32,29 +32,27 @@ export async function getCostosAnimal(animalId) {
 
 export async function getMedicamentosAnimal(animalId) {
   try {
-    const medicamentosRef = collection(db, "medicamentos");
-    const snapshot = await getDocs(medicamentosRef);
+    const ref = doc(db, "medicamentos", animalId);
+    const snap = await getDoc(ref);
 
-    let total = 0;
-    const medicamentos = [];
+    if (!snap.exists()) {
+      return { total: 0, medicamentos: [] };
+    }
 
-    snapshot.forEach((doc) => {
-      const data = doc.data();
+    const data = snap.data();
 
-      if (data.animalId === animalId) {
-        const costo = Number(data.costoTotal) || 0;
-        total += costo;
-
-        medicamentos.push({
-          id: doc.id,
+    return {
+      total: Number(data.costoTotal) || 0,
+      medicamentos: [
+        {
+          id: snap.id,
           ...data
-        });
-      }
-    });
+        }
+      ]
+    };
 
-    return { total, medicamentos };
   } catch (error) {
-    console.error(`Error obteniendo medicamentos del animal ${animalId}:`, error);
+    console.error("Error medicamentos:", error);
     return { total: 0, medicamentos: [] };
   }
 }
