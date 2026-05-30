@@ -2,225 +2,190 @@ import { useEffect, useState } from "react";
 import { collection, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 export default function AnimalList({ setEditingAnimal }) {
   const [animales, setAnimales] = useState([]);
   const [vencidos, setVencidos] = useState([]);
   const [mostrarAlerta, setMostrarAlerta] = useState(false);
-  const [filtroEspecie, setFiltroEspecie] = useState("");
-  const [filtroCategoria, setFiltroCategoria] = useState([]);
 
-  const animalesFiltrados = animales.filter((a) => {
-    return (
-      (!filtroEspecie || a.especie === filtroEspecie) &&
-      (!filtroCategoria || a.categoria === filtroCategoria)
-    );
-  });
+  const navigate = useNavigate();
 
-  // --- Obtener la vacuna más reciente ---
+  // Última vacuna
   const getLastVaccine = (vaccines = []) => {
-    if (!vaccines || vaccines.length === 0) return null;
-    const vacunasConFecha = vaccines.filter(v => v.date);
-    if (vacunasConFecha.length === 0) return null;
-    vacunasConFecha.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return vacunasConFecha[0];
+    if (!vaccines.length) return null;
+
+    const ordenadas = vaccines.filter(v => v.date);
+    ordenadas.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return ordenadas[0];
   };
 
-  // --- Estado sanitario según la última vacuna ---
+  // Estado sanitario
   const getStatus = (vaccines = []) => {
-    if (!vaccines || vaccines.length === 0) {
-      return { txt: "SIN REGISTROS", css: "text-slate-500 border-slate-700" };
+    if (!vaccines.length) {
+      return { txt: "SIN REGISTROS", css: "text-gray-500" };
     }
 
-    const lastVaccine = getLastVaccine(vaccines);
-    if (!lastVaccine || !lastVaccine.date) {
-      return { txt: "SIN REGISTROS", css: "text-slate-500 border-slate-700" };
-    }
+    const last = getLastVaccine(vaccines);
+    if (!last) return { txt: "SIN REGISTROS", css: "text-gray-500" };
 
-    // Comparar solo la fecha sin horas
     const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    hoy.setHours(0,0,0,0);
 
-    const fechaVac = new Date(lastVaccine.date);
-    fechaVac.setHours(0, 0, 0, 0);
+    const fecha = new Date(last.date);
+    fecha.setHours(0,0,0,0);
 
-    if (fechaVac < hoy) {
-      return { txt: "VENCIDA", css: "bg-red-600 text-white animate-pulse" };
+    if (fecha < hoy) {
+      return { txt: "VENCIDA", css: "bg-red-600 text-white" };
     }
 
-    const diffDays = Math.ceil((fechaVac - hoy) / (1000 * 60 * 60 * 24));
-    if (diffDays >= 0 && diffDays <= 5) {
-      return { txt: "POR VENCER", css: "bg-amber-500 text-white" };
+    const diff = Math.ceil((fecha - hoy)/(1000*60*60*24));
+
+    if (diff <= 5) {
+      return { txt: "POR VENCER", css: "bg-yellow-500 text-black" };
     }
 
-    return { txt: "AL DÍA", css: "bg-emerald-600 text-white" };
+    return { txt: "AL DÍA", css: "bg-green-600 text-white" };
   };
 
+  // Cargar animales
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "animales"), (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      // Creamos copia de vacunas para React
-      const animalesConCopias = docs.map(animal => ({
-        ...animal,
-        vaccines: animal.vaccines ? [...animal.vaccines] : []
+      const lista = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
       }));
 
-      setAnimales(animalesConCopias);
+      setAnimales(lista);
 
-      // Verificar vencidos usando solo la última vacuna
+      // detectar vencidos
       const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);  // Limpiamos la hora para comparar sólo fechas
+      hoy.setHours(0,0,0,0);
 
-      const listaVencidos = docs.filter(animal => {
-        return animal.vaccines?.some(v => {
-          if (!v.date) return false;
+      const venc = lista.filter(a =>
+        a.vaccines?.some(v => new Date(v.date) < hoy)
+      );
 
-          const fechaVac = new Date(v.date);
-          fechaVac.setHours(0, 0, 0, 0); // Solo fecha
-
-          return fechaVac < hoy;
-        });
-      });
-
-      setVencidos(listaVencidos);
-      setMostrarAlerta(listaVencidos.length > 0);
+      setVencidos(venc);
+      setMostrarAlerta(venc.length > 0);
     });
 
     return () => unsub();
   }, []);
 
+  // Eliminar
   const handleDelete = async (id) => {
-    if (window.confirm("¿Eliminar este animal y todo su historial permanentemente?")) {
+    if (window.confirm("¿Eliminar este animal?")) {
       await deleteDoc(doc(db, "animales", id));
     }
   };
 
   return (
-    <div className="relative p-4 w-full max-w-6xl mx-auto">
-      {/* Alerta de Vacunas Vencidas */}
+    <div className="p-6 max-w-6xl mx-auto text-white">
+
+      {/* ALERTA */}
       <AnimatePresence>
         {mostrarAlerta && (
           <motion.div
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 100 }}
-            className="fixed top-6 right-6 z-50 bg-red-700 text-white p-6 rounded-2xl shadow-2xl border border-red-400 w-80"
+            initial={{ x: 200, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 200, opacity: 0 }}
+            className="fixed top-5 right-5 bg-red-600 p-4 rounded shadow"
           >
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-black text-xl text-white">⚠️ ATENCIÓN</h3>
-              <button onClick={() => setMostrarAlerta(false)} className="text-2xl leading-none hover:scale-110">×</button>
-            </div>
-            <p className="text-sm font-medium">
-              {vencidos.length} animales requieren revisión de vacunas.
-            </p>
+            ⚠️ {vencidos.length} animales con vacunas vencidas
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="bg-slate-900 rounded-3xl border border-slate-700 shadow-2xl overflow-hidden">
-        <div className="p-8 bg-slate-800/50 flex justify-between items-center border-b border-slate-800">
-          <h2 className="text-3xl font-black text-white tracking-tighter uppercase">
-            Panel de Control Ganadero
-          </h2>
-          <span className="bg-purple-600 text-white px-4 py-1.5 rounded-xl text-xs font-black">
-            TOTAL: {animales.length}
-          </span>
-        </div>
+      {/* TÍTULO */}
+      <h1 className="text-3xl font-bold mb-6">
+        Lista de Animales
+      </h1>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-800/30 text-slate-500 text-[10px] uppercase tracking-[0.2em] border-b border-slate-800">
-                <th className="p-6 font-black">Identificación / Raza</th>
-                <th className="p-6 font-black text-center">Última Vacuna</th>
-                <th className="p-5 font-black text-center">Especie</th>
-                <th className="p-5 font-black text-center">Categoría</th>
-                <th className="p-6 font-black text-center">Estado Sanitario</th>
-                <th className="p-6 font-black text-right">Gestión</th>
-              </tr>
-            </thead>
+      {/* TABLA */}
+      <div className="bg-slate-800 rounded-xl overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-slate-900 text-sm">
+            <tr>
+              <th className="p-3">Animal</th>
+              <th>Última vacuna</th>
+              <th>Especie</th>
+              <th>Categoría</th>
+              <th>Estado</th>
+              <th className="text-right pr-4">Acciones</th>
+            </tr>
+          </thead>
 
-            <tbody className="divide-y divide-slate-800/50">
-              {animales.map((animal) => {
-                const status = getStatus(animal.vaccines);
-                const ultimaVac = getLastVaccine(animal.vaccines);
-                const ultimaFecha = ultimaVac ? ultimaVac.date : "---";
+          <tbody>
+            {animales.map(animal => {
+              const ultima = getLastVaccine(animal.vaccines);
+              const estado = getStatus(animal.vaccines);
 
-                return (
-                  <motion.tr
-                    key={animal.id}
-                    layout
-                    className="hover:bg-slate-800/40 transition-colors group"
-                  >
-                    <td className="p-6">
-                      <div className="text-white font-black text-lg uppercase tracking-tight group-hover:text-purple-400 transition-colors">
-                        {animal.raza}
-                      </div>
-                      <div className="text-slate-500 font-mono text-[10px]">
-                        ID: {animal.id}
-                      </div>
-                    </td>
+              return (
+                <tr key={animal.id} className="border-b border-slate-700">
 
-                    <td className="p-6 text-center">
-                      <div className="text-slate-300 font-bold text-sm">
-                        {ultimaFecha}
-                      </div>
-                      <div className="text-[9px] text-slate-600 uppercase font-black">
-                        Fecha Registro
-                      </div>
-                    </td>
+                  <td className="p-3">
+                    {animal.raza}
+                    <div className="text-xs text-gray-400">
+                      ID: {animal.id}
+                    </div>
+                  </td>
 
-                    <td className="p-1 text-center">
-                      <div className="text-white font-black text-lg uppercase tracking-tight group-hover:text-purple-400 transition-colors">
-                        {animal.especie}
-                      </div>
-                    </td>
-                    <td className="p-1 text-center">
-                      <div className="text-white font-black text-lg uppercase tracking-tight group-hover:text-purple-400 transition-colors">
-                        {animal.categoria}
-                      </div>
-                    </td>
+                  <td className="text-center">
+                    {ultima ? ultima.date : "---"}
+                  </td>
 
-                    <td className="p-5 text-center">
-                      <span
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black tracking-widest border ${status.css}`}
-                      >
-                        {status.txt}
-                      </span>
-                    </td>
+                  <td className="text-center">
+                    {animal.especie}
+                  </td>
 
-                    <td className="p-3">
-                      <div className="flex justify-end gap-3">
-                        <button
-                          onClick={() => setEditingAnimal({ ...animal })} // crear copia para evitar referencias antiguas
-                          className="bg-white text-slate-900 px-4 py-2 rounded-xl font-black text-[10px] hover:bg-purple-500 hover:text-white transition-all shadow-lg active:scale-95"
-                        >
-                          VER DETALLES
-                        </button>
+                  <td className="text-center">
+                    {animal.categoria}
+                  </td>
 
-                        <button
-                          onClick={() => handleDelete(animal.id)}
-                          className="bg-red-600/10 text-red-500 p-2.5 rounded-xl hover:bg-red-600 hover:text-white transition-all"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                );
-              })}
-            </tbody>
-          </table>
+                  <td className="text-center">
+                    <span className={`px-2 py-1 rounded ${estado.css}`}>
+                      {estado.txt}
+                    </span>
+                  </td>
 
-          {animales.length === 0 && (
-            <div className="p-20 text-center text-slate-600 font-black uppercase tracking-widest text-sm">
-              No hay animales registrados en la base de datos
-            </div>
-          )}
-        </div>
+                  <td className="text-right pr-4 space-x-2">
+
+                    {/* 🔥 IR A HISTORIAL */}
+                    <button
+                      onClick={() => navigate(`/animal/${animal.id}`)}
+                      className="bg-purple-600 px-3 py-1 rounded"
+                    >
+                      VER HISTORIAL
+                    </button>
+
+                    <button
+                      onClick={() => setEditingAnimal({ ...animal })}
+                      className="bg-blue-500 px-3 py-1 rounded"
+                    >
+                      EDITAR
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(animal.id)}
+                      className="bg-red-600 px-3 py-1 rounded"
+                    >
+                      ELIMINAR
+                    </button>
+
+                  </td>
+
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {animales.length === 0 && (
+          <div className="p-6 text-center text-gray-400">
+            No hay animales registrados
+          </div>
+        )}
       </div>
     </div>
   );

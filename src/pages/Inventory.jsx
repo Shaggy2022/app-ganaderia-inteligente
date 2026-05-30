@@ -1,11 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Pill, Wheat, Stethoscope } from "lucide-react";  // ← quita CalendarDays
+import { Pill, Wheat, Stethoscope } from "lucide-react";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc
+} from "firebase/firestore";
+import { db } from "../firebase/firebaseConfig";
 
 import MedicamentoList from "../components/MedicamentoList";
-import MedicamentoForm from "../components/MedicamentoForm";
 import VeterinariaTab from "../components/VeterinariaTab";
-
 
 export default function Inventory() {
   const [tab, setTab] = useState("medicamentos");
@@ -14,19 +20,13 @@ export default function Inventory() {
     { key: "medicamentos", label: "Medicamentos", icon: Pill },
     { key: "alimentos", label: "Alimentos", icon: Wheat },
     { key: "veterinaria", label: "Veterinaria", icon: Stethoscope },
-    
-
   ];
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-
-      {/* HEADER */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-black text-white">
-          INVENTARIO GENERAL
-        </h1>
-      </div>
+      <h1 className="text-3xl font-black text-white">
+        INVENTARIO GENERAL
+      </h1>
 
       {/* TABS */}
       <div className="flex gap-4">
@@ -38,11 +38,10 @@ export default function Inventory() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold
                 ${active
-                  ? "bg-indigo-600 text-white shadow-lg"
-                  : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-                }`}
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-800 text-slate-400"}`}
             >
               <Icon size={18} />
               {t.label}
@@ -51,33 +50,22 @@ export default function Inventory() {
         })}
       </div>
 
-      {/* CONTENIDO */}
-      <motion.div
-        key={tab}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        {tab === "medicamentos" && (
-          <>
-            <MedicamentoList />
-          </>
-        )}
-
+      <motion.div key={tab}>
+        {tab === "medicamentos" && <MedicamentoList />}
         {tab === "alimentos" && <AlimentosModule />}
-
-        {tab === "veterinaria" && <VeterinariaTab />
-        }
-        
+        {tab === "veterinaria" && <VeterinariaTab />}
       </motion.div>
     </div>
   );
 }
 
 /* =========================
-   COMPONENTE ALIMENTOS
+   ALIMENTOS CON SELECT DE ANIMALES
 ========================= */
 function AlimentosModule() {
   const [data, setData] = useState([]);
+  const [animales, setAnimales] = useState([]);
+
   const [form, setForm] = useState({
     tipo: "",
     cantidad: "",
@@ -93,19 +81,47 @@ function AlimentosModule() {
     hasta: "",
   });
 
-  // 👉 Crear registro
-  const handleSubmit = (e) => {
+  // ✅ CARGAR ALIMENTOS
+  useEffect(() => {
+    cargarAlimentos();
+  }, []);
+
+  // ✅ CARGAR ANIMALES
+  useEffect(() => {
+    const cargarAnimales = async () => {
+      const snap = await getDocs(collection(db, "animales"));
+      const lista = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+      setAnimales(lista);
+    };
+
+    cargarAnimales();
+  }, []);
+
+  const cargarAlimentos = async () => {
+    const snap = await getDocs(collection(db, "alimentacion"));
+    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    setData(lista);
+  };
+
+  // ✅ GUARDAR
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const nuevo = {
-      ...form,
+      tipo: form.tipo,
       cantidad: Number(form.cantidad),
       costo: Number(form.costo),
       total: Number(form.cantidad) * Number(form.costo),
-      id: Date.now(),
+      fecha: form.fecha,
+      animalId: form.animal,
     };
 
-    setData([...data, nuevo]);
+    await addDoc(collection(db, "alimentacion"), nuevo);
+
+    await cargarAlimentos();
 
     setForm({
       tipo: "",
@@ -116,33 +132,41 @@ function AlimentosModule() {
     });
   };
 
-  // 👉 Eliminar
-  const eliminar = (id) => {
-    setData(data.filter((d) => d.id !== id));
+  // ✅ ELIMINAR
+  const eliminar = async (id) => {
+    await deleteDoc(doc(db, "alimentacion", id));
+    await cargarAlimentos();
   };
 
-  // 👉 Filtros
   const filtrados = data.filter((d) => {
     return (
-      (!filtro.tipo || d.tipo.toLowerCase().includes(filtro.tipo.toLowerCase())) &&
-      (!filtro.animal || d.animal.toLowerCase().includes(filtro.animal.toLowerCase())) &&
+      (!filtro.tipo ||
+        d.tipo.toLowerCase().includes(filtro.tipo.toLowerCase())) &&
+      (!filtro.animal ||
+        (d.animalId || "")
+          .toLowerCase()
+          .includes(filtro.animal.toLowerCase())) &&
       (!filtro.desde || d.fecha >= filtro.desde) &&
       (!filtro.hasta || d.fecha <= filtro.hasta)
     );
   });
 
-  // 👉 Gasto total
   const gastoTotal = filtrados.reduce((acc, d) => acc + d.total, 0);
 
   return (
     <div className="space-y-6">
 
-      {/* FORMULARIO */}
-      <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-slate-800 p-4 rounded-xl">
+      {/* FORM */}
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-slate-800 p-4 rounded-xl"
+      >
         <input
           placeholder="Tipo alimento"
           value={form.tipo}
-          onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, tipo: e.target.value })
+          }
           className="p-2 rounded bg-slate-700 text-white"
           required
         />
@@ -151,7 +175,9 @@ function AlimentosModule() {
           type="number"
           placeholder="Cantidad"
           value={form.cantidad}
-          onChange={(e) => setForm({ ...form, cantidad: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, cantidad: e.target.value })
+          }
           className="p-2 rounded bg-slate-700 text-white"
           required
         />
@@ -160,7 +186,9 @@ function AlimentosModule() {
           type="number"
           placeholder="Costo unidad"
           value={form.costo}
-          onChange={(e) => setForm({ ...form, costo: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, costo: e.target.value })
+          }
           className="p-2 rounded bg-slate-700 text-white"
           required
         />
@@ -168,50 +196,35 @@ function AlimentosModule() {
         <input
           type="date"
           value={form.fecha}
-          onChange={(e) => setForm({ ...form, fecha: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, fecha: e.target.value })
+          }
           className="p-2 rounded bg-slate-700 text-white"
           required
         />
 
-        <input
-          placeholder="Animal / Lote"
+        {/* ✅ SELECT DE ANIMALES */}
+        <select
           value={form.animal}
-          onChange={(e) => setForm({ ...form, animal: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, animal: e.target.value })
+          }
           className="p-2 rounded bg-slate-700 text-white"
           required
-        />
+        >
+          <option value="">Selecciona un animal</option>
+
+          {animales.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.id} - {a.raza}
+            </option>
+          ))}
+        </select>
 
         <button className="bg-indigo-600 text-white rounded p-2 font-bold">
           Guardar
         </button>
       </form>
-
-      {/* FILTROS */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <input
-          placeholder="Filtrar tipo"
-          onChange={(e) => setFiltro({ ...filtro, tipo: e.target.value })}
-          className="p-2 rounded bg-slate-800 text-white"
-        />
-
-        <input
-          placeholder="Filtrar animal"
-          onChange={(e) => setFiltro({ ...filtro, animal: e.target.value })}
-          className="p-2 rounded bg-slate-800 text-white"
-        />
-
-        <input
-          type="date"
-          onChange={(e) => setFiltro({ ...filtro, desde: e.target.value })}
-          className="p-2 rounded bg-slate-800 text-white"
-        />
-
-        <input
-          type="date"
-          onChange={(e) => setFiltro({ ...filtro, hasta: e.target.value })}
-          className="p-2 rounded bg-slate-800 text-white"
-        />
-      </div>
 
       {/* TABLA */}
       <div className="bg-slate-800 rounded-xl p-4">
@@ -227,15 +240,18 @@ function AlimentosModule() {
               <th></th>
             </tr>
           </thead>
+
           <tbody>
             {filtrados.map((d) => (
               <tr key={d.id} className="border-t border-slate-700">
                 <td>{d.tipo}</td>
                 <td>{d.cantidad}</td>
                 <td>${d.costo}</td>
-                <td className="font-bold text-green-400">${d.total}</td>
+                <td className="text-green-400 font-bold">
+                  ${d.total}
+                </td>
                 <td>{d.fecha}</td>
-                <td>{d.animal}</td>
+                <td>{d.animalId}</td>
                 <td>
                   <button
                     onClick={() => eliminar(d.id)}
@@ -249,12 +265,10 @@ function AlimentosModule() {
           </tbody>
         </table>
 
-        {/* TOTAL */}
-        <div className="mt-4 text-right font-bold text-green-400">
+        <div className="mt-4 text-right text-green-400 font-bold">
           Gasto total: ${gastoTotal}
         </div>
       </div>
     </div>
   );
 }
-

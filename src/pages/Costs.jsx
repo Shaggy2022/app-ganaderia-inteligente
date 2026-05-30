@@ -394,13 +394,16 @@ export default function Costs() {
             <div style={{ marginBottom: "14px" }}>
               <label style={labelStyle}>Monto (COP)</label>
               <input
-                  type="number"
-                  value={form.monto}
-                  disabled={form.tipo === "Medicamentos"} // 🔥 clave
-                  style={{
-                    ...inputStyle,
-                    opacity: form.tipo === "Medicamentos" ? 0.6 : 1,
-                  }}
+                type="number"
+                value={form.monto}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, monto: e.target.value }))
+                }
+                disabled={form.tipo === "Medicamentos"} // ✅ correcto
+                style={{
+                  ...inputStyle,
+                  opacity: form.tipo === "Medicamentos" ? 0.6 : 1,
+                }}
               />
             </div>
 
