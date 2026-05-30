@@ -6,6 +6,8 @@ import {
   getPeriodosDisponibles,
 } from "../services/financieroService";
 
+import { exportarReportePDF } from "../services/exportarPDF";
+
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -92,6 +94,13 @@ export default function ReporteFinanciero() {
           className="ml-auto bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all"
         >
           Actualizar
+        </button>
+        <button
+          onClick={() => exportarReportePDF(data, "Mi Finca")}
+          disabled={!data}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+        >
+          📄 Exportar PDF
         </button>
       </div>
 
